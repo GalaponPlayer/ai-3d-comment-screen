@@ -1,11 +1,37 @@
-import Versions from './components/Versions'
+import { generateClient } from 'aws-amplify/data'
+import { useEffect, useState } from 'react'
+import type { Schema } from '../../../amplify/data/resource'
 import icons from './assets/icons.svg'
+import Versions from './components/Versions'
 
 function App(): JSX.Element {
+  const client = generateClient<Schema>()
+  const [comments, setComments] = useState<Array<Schema["Comment"]["type"]>>([])
+  useEffect(() => {
+    try {
+      console.log('client', client)
+      console.log('client.models', client?.models)
+      if (client?.models?.Comment) {
+        client.models.Comment.observeQuery().subscribe({
+          next: (data) => setComments([...data.items]),
+          error: (error) => console.error('Error observing comments:', error)
+        });
+      } else {
+        console.error('Comment model not initialized');
+      }
+    } catch (error) {
+      console.error('Error setting up comment subscription:', error);
+    }
+  }, []);
   return (
     <div className="container">
       <Versions></Versions>
-
+      {comments && comments.map((comment) => (
+        <div key={comment.id}>
+          <p>{comment.comment}</p>
+          <p>{comment.name}</p>
+        </div>
+      ))}
       <svg className="hero-logo" viewBox="0 0 900 300">
         <use xlinkHref={`${icons}#electron`} />
       </svg>
