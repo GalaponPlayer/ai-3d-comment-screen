@@ -3,7 +3,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import outputs from '../../../amplify_outputs.json'
 import App from './App'
-import './assets/index.css'
+// import './assets/index.css'
 
 Amplify.configure(outputs)
 

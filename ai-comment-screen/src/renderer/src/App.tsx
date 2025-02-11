@@ -1,19 +1,22 @@
+import callAITuber from '@renderer/hooks/openai'
 import { generateClient } from 'aws-amplify/data'
+import gsap from 'gsap'
 import { useEffect, useState } from 'react'
 import type { Schema } from '../../../amplify/data/resource'
-import icons from './assets/icons.svg'
 import Versions from './components/Versions'
 
 function App(): JSX.Element {
   const client = generateClient<Schema>()
+  const [count, setCount] = useState(0)
   const [comments, setComments] = useState<Array<Schema["Comment"]["type"]>>([])
+  const [recentComments, setRecentComments] = useState<string[]>([])
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | undefined;
+
     try {
-      console.log('client', client)
-      console.log('client.models', client?.models)
       if (client?.models?.Comment) {
-        client.models.Comment.observeQuery().subscribe({
-          next: (data) => setComments([...data.items]),
+        subscription = client.models.Comment.onCreate().subscribe({
+          next: (data) => handleNewComment(data),
           error: (error) => console.error('Error observing comments:', error)
         });
       } else {
@@ -22,7 +25,62 @@ function App(): JSX.Element {
     } catch (error) {
       console.error('Error setting up comment subscription:', error);
     }
+
+    // Cleanup function to unsubscribe when component unmounts
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
+  const handleNewComment = (comment: Schema["Comment"]["type"]): void => {
+    setComments([...comments, comment])
+    setRecentComments([...recentComments, comment.comment ?? ''])
+    niconico(comment.comment ?? '')
+  }
+
+  // 5 秒経つか 5 個コメントが流れるかしたら、openai にコメントを渡す
+  useEffect(() => {
+    if (recentComments.length === 0) return
+    if (recentComments.length >= 5) {
+      callAITuber(recentComments).then((response) => {
+        console.log(response)
+        setRecentComments([])
+      })
+    }
+    const interval = setInterval(() => {
+      callAITuber(recentComments).then((response) => {
+        console.log(response)
+        setRecentComments([])
+      })
+    }, 5000)
+    return () => {
+      clearInterval(interval)
+    }
+  }, [recentComments])
+
+  const niconico = async (txt: string): Promise<void> => {
+    const div_text = document.createElement('div')
+    div_text.id = 'text' + count
+    setCount(count + 1)
+    div_text.style.position = 'fixed'
+    div_text.style.whiteSpace = 'nowrap'
+    div_text.style.fontSize = '50px'
+    div_text.style.fontWeight = 'bold'
+    div_text.style.color = 'white'
+    div_text.style.textStroke = '1px black'
+    div_text.style.textShadow = '2px 2px 2px black'
+    div_text.style.left = `${document.documentElement.clientWidth}px`
+    const random = Math.round(Math.random() * document.documentElement.clientHeight)
+    div_text.style.top = `${random}px`
+    div_text.appendChild(document.createTextNode(`${txt}`))
+    document.body.appendChild(div_text)
+
+    await gsap.to(`#${div_text.id}`, {
+      duration: 8,
+      x: -1 * (document.documentElement.clientWidth + div_text.clientWidth)
+    })
+
+    div_text.parentNode.removeChild(div_text)
+  }
   return (
     <div className="container">
       <Versions></Versions>
@@ -32,138 +90,6 @@ function App(): JSX.Element {
           <p>{comment.name}</p>
         </div>
       ))}
-      <svg className="hero-logo" viewBox="0 0 900 300">
-        <use xlinkHref={`${icons}#electron`} />
-      </svg>
-      <h2 className="hero-text">
-        You{"'"}ve successfully created an Electron project with React and TypeScript
-      </h2>
-      <p className="hero-tagline">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-
-      <div className="links">
-        <div className="link-item">
-          <a target="_blank" href="https://electron-vite.org" rel="noopener noreferrer">
-            Documentation
-          </a>
-        </div>
-        <div className="link-item link-dot">•</div>
-        <div className="link-item">
-          <a
-            target="_blank"
-            href="https://github.com/alex8088/electron-vite"
-            rel="noopener noreferrer"
-          >
-            Getting Help
-          </a>
-        </div>
-        <div className="link-item link-dot">•</div>
-        <div className="link-item">
-          <a
-            target="_blank"
-            href="https://github.com/alex8088/quick-start/tree/master/packages/create-electron"
-            rel="noopener noreferrer"
-          >
-            create-electron
-          </a>
-        </div>
-      </div>
-
-      <div className="features">
-        <div className="feature-item">
-          <article>
-            <h2 className="title">Configuring</h2>
-            <p className="detail">
-              Config with <span>electron.vite.config.ts</span> and refer to the{' '}
-              <a target="_blank" href="https://electron-vite.org/config" rel="noopener noreferrer">
-                config guide
-              </a>
-              .
-            </p>
-          </article>
-        </div>
-        <div className="feature-item">
-          <article>
-            <h2 className="title">HMR</h2>
-            <p className="detail">
-              Edit <span>src/renderer</span> files to test HMR. See{' '}
-              <a
-                target="_blank"
-                href="https://electron-vite.org/guide/hmr.html"
-                rel="noopener noreferrer"
-              >
-                docs
-              </a>
-              .
-            </p>
-          </article>
-        </div>
-        <div className="feature-item">
-          <article>
-            <h2 className="title">Hot Reloading</h2>
-            <p className="detail">
-              Run{' '}
-              <span>
-                {"'"}electron-vite dev --watch{"'"}
-              </span>{' '}
-              to enable. See{' '}
-              <a
-                target="_blank"
-                href="https://electron-vite.org/guide/hot-reloading.html"
-                rel="noopener noreferrer"
-              >
-                docs
-              </a>
-              .
-            </p>
-          </article>
-        </div>
-        <div className="feature-item">
-          <article>
-            <h2 className="title">Debugging</h2>
-            <p className="detail">
-              Check out <span>.vscode/launch.json</span>. See{' '}
-              <a
-                target="_blank"
-                href="https://electron-vite.org/guide/debugging.html"
-                rel="noopener noreferrer"
-              >
-                docs
-              </a>
-              .
-            </p>
-          </article>
-        </div>
-        <div className="feature-item">
-          <article>
-            <h2 className="title">Source Code Protection</h2>
-            <p className="detail">
-              Supported via built-in plugin <span>bytecodePlugin</span>. See{' '}
-              <a
-                target="_blank"
-                href="https://electron-vite.org/guide/source-code-protection.html"
-                rel="noopener noreferrer"
-              >
-                docs
-              </a>
-              .
-            </p>
-          </article>
-        </div>
-        <div className="feature-item">
-          <article>
-            <h2 className="title">Packaging</h2>
-            <p className="detail">
-              Use{' '}
-              <a target="_blank" href="https://www.electron.build" rel="noopener noreferrer">
-                electron-builder
-              </a>{' '}
-              and pre-configured to pack your app.
-            </p>
-          </article>
-        </div>
-      </div>
     </div>
   )
 }
