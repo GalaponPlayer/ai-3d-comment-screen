@@ -1,12 +1,16 @@
-import callAITuber from '@renderer/hooks/openai'
+import { useAITuber } from '@renderer/hooks/aituber'
 import { generateClient } from 'aws-amplify/data'
 import gsap from 'gsap'
 import { useEffect, useState } from 'react'
 import type { Schema } from '../../../amplify/data/resource'
+import './App.css'
 import Versions from './components/Versions'
-
 function App(): JSX.Element {
   const client = generateClient<Schema>()
+  const onPlaybackEnd = (): void => {
+    setRecentComments([])
+  }
+  const { isReplying, isSpeaking, speakingText, ReplyComments } = useAITuber(onPlaybackEnd)
   const [count, setCount] = useState(0)
   const [comments, setComments] = useState<Array<Schema["Comment"]["type"]>>([])
   const [recentComments, setRecentComments] = useState<string[]>([])
@@ -31,31 +35,39 @@ function App(): JSX.Element {
       subscription?.unsubscribe();
     };
   }, []);
+
   const handleNewComment = (comment: Schema["Comment"]["type"]): void => {
     setComments([...comments, comment])
     setRecentComments([...recentComments, comment.comment ?? ''])
     niconico(comment.comment ?? '')
   }
 
-  // 5 秒経つか 5 個コメントが流れるかしたら、openai にコメントを渡す
+
+
+  // 5 秒経つか 5 個コメントが流れるかしたら、リプライを発火
   useEffect(() => {
     if (recentComments.length === 0) return
-    if (recentComments.length >= 5) {
-      callAITuber(recentComments).then((response) => {
-        console.log(response)
-        setRecentComments([])
-      })
+    if (isReplying) return
+
+    const processComments = (comments: string[]): void => {
+      setRecentComments([])
+      ReplyComments(comments)
     }
+
+    if (recentComments.length >= 5) {
+      processComments(recentComments)
+    }
+
     const interval = setInterval(() => {
-      callAITuber(recentComments).then((response) => {
-        console.log(response)
-        setRecentComments([])
-      })
+      if (recentComments.length > 0) {  // コメントが存在する場合のみ処理を実行
+        processComments(recentComments)
+      }
     }, 5000)
+
     return () => {
       clearInterval(interval)
     }
-  }, [recentComments])
+  }, [recentComments, isReplying])
 
   const niconico = async (txt: string): Promise<void> => {
     const div_text = document.createElement('div')
@@ -82,7 +94,7 @@ function App(): JSX.Element {
     div_text.parentNode.removeChild(div_text)
   }
   return (
-    <div className="container">
+    <div className="window-wrapper">
       <Versions></Versions>
       {comments && comments.map((comment) => (
         <div key={comment.id}>
@@ -90,6 +102,10 @@ function App(): JSX.Element {
           <p>{comment.name}</p>
         </div>
       ))}
+      <div className="yomiage">
+        {/* <p>user ロールは、実際にユーザーからの入力を表します。これはアシスタントに指示を与えるためのメッセージです。</p> */}
+        <p>{isSpeaking && speakingText}</p>
+      </div>
     </div>
   )
 }
