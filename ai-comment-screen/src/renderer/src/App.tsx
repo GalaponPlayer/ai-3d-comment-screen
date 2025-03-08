@@ -1,3 +1,4 @@
+import TypingText from '@renderer/components/TypingText'
 import { useAITuber } from '@renderer/hooks/aituber'
 import { generateClient } from 'aws-amplify/data'
 import gsap from 'gsap'
@@ -103,8 +104,8 @@ function App(): JSX.Element {
         </div>
       ))}
       <div className="yomiage">
-        {/* <p>user ロールは、実際にユーザーからの入力を表します。これはアシスタントに指示を与えるためのメッセージです。</p> */}
-        <p>{isSpeaking && speakingText}</p>
+        {isSpeaking && <TypingText text={speakingText} />}
+        {/* <TypingText text="おは。今日もいい天気だね。今日は何して遊ぶ？" /> */}
       </div>
     </div>
   )

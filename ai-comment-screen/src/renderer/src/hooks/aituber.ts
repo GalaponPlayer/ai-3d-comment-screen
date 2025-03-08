@@ -35,11 +35,13 @@ export const useAITuber = (
               source.start()
               source.onended = (): void => {
                 console.log('Audio playback ended')
-                setIsSpeaking(false)
-                setIsReplying(false)
-                setSpeakingText('')
-                // コールバック関数が存在する場合に実行
-                onPlaybackEnd?.()
+                setTimeout(() => {
+                  setIsSpeaking(false)
+                  setIsReplying(false)
+                  setSpeakingText('')
+                  // コールバック関数が存在する場合に実行
+                  onPlaybackEnd?.()
+                }, 1500)
               }
             })
             .catch((error) => {
