@@ -78,7 +78,7 @@ function App(): JSX.Element {
     div_text.style.fontSize = '50px'
     div_text.style.fontWeight = 'bold'
     div_text.style.color = 'white'
-    div_text.style.textStroke = '1px black'
+    div_text.style.webkitTextStroke = '1px black'
     div_text.style.textShadow = '2px 2px 2px black'
     div_text.style.left = `${document.documentElement.clientWidth}px`
     const random = Math.round(Math.random() * document.documentElement.clientHeight)
@@ -91,7 +91,7 @@ function App(): JSX.Element {
       x: -1 * (document.documentElement.clientWidth + div_text.clientWidth)
     })
 
-    div_text.parentNode.removeChild(div_text)
+    div_text.parentNode?.removeChild(div_text)
   }
   return (
     <div className="window-wrapper">
